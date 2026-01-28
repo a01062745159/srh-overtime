@@ -1,6 +1,6 @@
 import streamlit as st
 import gspread
-from google.oauth2.service_account import Credentials # 최신형 도구
+from google.oauth2.service_account import Credentials
 from datetime import datetime
 
 st.set_page_config(page_title="수려한치과 오버타임", layout="centered")
@@ -8,22 +8,17 @@ st.title("🦷 수려한치과 오버타임 기록기")
 
 @st.cache_resource
 def get_client():
-    # 최신 구글 보안 표준에 맞춘 연결 방식입니다
-    scopes = [
-        "https://www.googleapis.com/auth/spreadsheets",
-        "https://www.googleapis.com/auth/drive"
-    ]
-    # key.json 파일에서 정보를 읽어옵니다
-    creds = Credentials.from_service_account_file("key.json", scopes=scopes)
+    # 'key.json' 파일 대신 스트림릿 금고(Secrets)를 열어봅니다
+    info = st.secrets["gcp_service_account"]
+    creds = Credentials.from_service_account_info(info)
     return gspread.authorize(creds)
 
 try:
     client = get_client()
-    # 시트 제목 확인: '수려한치과 오버타임'
     sheet = client.open("수려한치과 오버타임").sheet1 
-    st.success("✅ 시스템 정상 연결됨 (최신 보안 모드)")
+    st.success("✅ 시스템 연결 완료! (보안 모드 가동)")
 except Exception as e:
-    st.error(f"오류 발생: {e}")
+    st.error("연결 대기 중... Secrets 설정을 확인하고 앱을 리부트해주세요.")
 
 with st.form("overtime_form", clear_on_submit=True):
     name = st.text_input("직원 성함")
@@ -40,8 +35,6 @@ with st.form("overtime_form", clear_on_submit=True):
                 date_str = datetime.now().strftime("%Y-%m-%d")
                 sheet.append_row([date_str, name, str(start_time), str(end_time), reason])
                 st.balloons()
-                st.success("저장되었습니다!")
+                st.success(f"{name} 님, 기록이 완료되었습니다!")
             except Exception as e:
                 st.error(f"저장 실패: {e}")
-        else:
-            st.warning("내용을 입력해주세요.")
